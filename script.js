@@ -1,31 +1,49 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+
+import {
+    getFirestore,
+    collection,
+    addDoc,
+    onSnapshot,
+    updateDoc,
+    deleteDoc,
+    doc,
+    serverTimestamp
+} from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
+
+// FIREBASE CONFIGURATION
+const firebaseConfig = {
+    apiKey: "AIzaSyD-arcLhQGq475C-fxul4J8zmF0oLHgn5w",
+    authDomain: "arinna-personal-website.firebaseapp.com",
+    projectId: "arinna-personal-website",
+    storageBucket: "arinna-personal-website.firebasestorage.app",
+    messagingSenderId: "28689531442",
+    appId: "1:28689531442:web:48c8c82c4aeac31354b22b"
+};
+
+// CONNECT TO FIREBASE
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 // COMMENTS SYSTEM
 const commentForm = document.getElementById("commentForm");
 const commentsList = document.getElementById("commentsList");
 
-let comments = JSON.parse(
-    localStorage.getItem("arinnaComments")
-) || [];
+const ownerLogin = document.getElementById("ownerLogin");
+const ownerLogout = document.getElementById("ownerLogout");
+const ownerStatus = document.getElementById("ownerStatus");
 
+let comments = [];
 let ownerMode = false;
-
-// SAVE COMMENTS
-function saveComments() {
-
-    localStorage.setItem(
-        "arinnaComments",
-        JSON.stringify(comments)
-    );
-
-}
 
 // DISPLAY COMMENTS
 function displayComments() {
 
+    if (!commentsList) return;
+
     commentsList.innerHTML = "";
 
     if (comments.length === 0) {
-
         commentsList.textContent =
             "No comments yet. Be the first to leave a comment!";
 
@@ -50,7 +68,7 @@ function displayComments() {
 
         const date = document.createElement("span");
         date.className = "comment-date";
-        date.textContent = comment.date;
+        date.textContent = comment.date || "";
 
         header.append(name, date);
 
@@ -69,31 +87,37 @@ function displayComments() {
             button.className = "reaction-btn";
             button.type = "button";
 
-            const count = comment.reactions[emoji] || 0;
-
+            const count = comment.reactions?.[emoji] || 0;
             button.textContent = emoji + " " + count;
 
-            button.addEventListener("click", function() {
+            button.addEventListener("click", async function() {
 
-                comment.reactions[emoji] =
-                    comment.reactions[emoji] || 0;
+                const currentReactions = comment.reactions || {};
+                const currentMine = comment.myReactions || [];
 
-                // Toggle reaction for this browser
-                const active = comment.myReactions.includes(emoji);
+                const active = currentMine.includes(emoji);
 
-                if (active) {
-                    comment.reactions[emoji]--;
-                    comment.myReactions =
-                        comment.myReactions.filter(
-                            item => item !== emoji
-                        );
-                } else {
-                    comment.reactions[emoji]++;
-                    comment.myReactions.push(emoji);
+                const newReactions = {
+                    ...currentReactions,
+                    [emoji]: Math.max(
+                        0,
+                        (currentReactions[emoji] || 0) + (active ? -1 : 1)
+                    )
+                };
+
+                const newMine = active
+                    ? currentMine.filter(item => item !== emoji)
+                    : [...currentMine, emoji];
+
+                try {
+                    await updateDoc(doc(db, "comments", comment.id), {
+                        reactions: newReactions,
+                        myReactions: newMine
+                    });
+                } catch (error) {
+                    console.error("Reaction error:", error);
+                    alert("Unable to update reaction.");
                 }
-
-                saveComments();
-                displayComments();
 
             });
 
@@ -108,54 +132,59 @@ function displayComments() {
 
         likeButton.textContent =
             (comment.liked ? "❤️ Liked " : "🤍 Like ") +
-            comment.likes;
+            (comment.likes || 0);
 
-        likeButton.addEventListener("click", function() {
+        likeButton.addEventListener("click", async function() {
 
-            comment.liked = !comment.liked;
+            const newLiked = !comment.liked;
 
-            comment.likes += comment.liked ? 1 : -1;
-
-            saveComments();
-            displayComments();
+            try {
+                await updateDoc(doc(db, "comments", comment.id), {
+                    liked: newLiked,
+                    likes: Math.max(
+                        0,
+                        (comment.likes || 0) + (newLiked ? 1 : -1)
+                    )
+                });
+            } catch (error) {
+                console.error("Like error:", error);
+                alert("Unable to update like.");
+            }
 
         });
 
         actions.appendChild(likeButton);
 
-        // Delete button: owner mode only
-        if (ownerMode) {
-
-            const deleteButton = document.createElement("button");
-
-            deleteButton.className = "delete-btn";
-            deleteButton.type = "button";
-            deleteButton.textContent = "Delete";
-
-            deleteButton.addEventListener("click", function() {
-
-                if (confirm("Are you sure you want to delete this comment?")) {
-
-                    comments = comments.filter(
-                        item => item.id !== comment.id
-                    );
-
-                    saveComments();
-                    displayComments();
-
-                }
-
-            });
-
-            actions.appendChild(deleteButton);
-
-        }
-
-
         card.append(header, message, actions);
-
         commentsList.appendChild(card);
 
+    });
+
+}
+
+// LISTEN FOR COMMENTS FROM FIREBASE
+if (commentsList) {
+
+    onSnapshot(collection(db, "comments"), function(snapshot) {
+
+        comments = snapshot.docs.map(function(document) {
+            return {
+                id: document.id,
+                ...document.data()
+            };
+        });
+
+        comments.sort(function(a, b) {
+            const timeA = a.createdAt?.toMillis() || 0;
+            const timeB = b.createdAt?.toMillis() || 0;
+            return timeB - timeA;
+        });
+
+        displayComments();
+
+    }, function(error) {
+        console.error("Error loading comments:", error);
+        commentsList.textContent = "Unable to load comments.";
     });
 
 }
@@ -163,29 +192,22 @@ function displayComments() {
 // SUBMIT A COMMENT
 if (commentForm) {
 
-    commentForm.addEventListener("submit", function(event) {
+    commentForm.addEventListener("submit", async function(event) {
 
         event.preventDefault();
 
         const name = document.getElementById("name").value.trim();
         const message = document.getElementById("message").value.trim();
 
-        if (!name || !message) {
-            return;
-        }
+        if (!name || !message) return;
 
         const newComment = {
 
-            id: Date.now(),
-
             name: name,
-
             message: message,
-
             date: new Date().toLocaleDateString(),
 
             likes: 0,
-
             liked: false,
 
             reactions: {
@@ -195,37 +217,40 @@ if (commentForm) {
                 "😍": 0
             },
 
-            myReactions: []
+            myReactions: [],
+            createdAt: serverTimestamp()
 
         };
 
-        comments.unshift(newComment);
+        try {
 
-        saveComments();
+            await addDoc(collection(db, "comments"), newComment);
 
-        displayComments();
+            commentForm.reset();
 
-        commentForm.reset();
+            document.getElementById("form-response").textContent =
+                "Your comment has been posted successfully! 💜";
 
-        document.getElementById("form-response").textContent =
-            "Your comment has been posted successfully! 💜";
+        } catch (error) {
+
+            console.error("Error submitting comment:", error);
+
+            document.getElementById("form-response").textContent =
+                "Unable to post your comment. Please try again.";
+
+        }
 
     });
 
 }
 
 // OWNER LOGIN
-const ownerLogin = document.getElementById("ownerLogin");
-const ownerLogout = document.getElementById("ownerLogout");
-const ownerStatus = document.getElementById("ownerStatus");
-
 if (ownerLogin) {
 
     ownerLogin.addEventListener("click", function() {
 
         const password = prompt("Enter owner password:");
 
-        //PASSWORD:
         if (password === "A#2003") {
 
             ownerMode = true;
@@ -264,6 +289,3 @@ if (ownerLogout) {
     });
 
 }
-
-// SHOW SAVED COMMENTS WHEN PAGE OPENS
-displayComments();
