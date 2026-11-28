@@ -929,30 +929,43 @@ html, body {
 @media screen and (max-width: 700px) {
 
     .video-page {
-        width: 95%;
-        margin: 25px auto;
+        width: 100%;
+        margin: 25px 0;
+        padding: 0 15px;
     }
 
     .video-container {
-        display: flex !important;
-        flex-direction: row !important;
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
         overflow-x: auto;
         overflow-y: hidden;
         gap: 15px;
         width: 100%;
-        padding-bottom: 15px;
+        margin: 25px 0;
+        padding: 0 0 15px;
         scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
     }
 
     .video-card {
-        flex: 0 0 75%;
-        min-width: 75%;
+        flex: 0 0 85%;
+        width: 85%;
+        min-width: 85%;
+        max-width: 85%;
         padding: 12px;
+        scroll-snap-align: start;
     }
 
     .video-box {
         width: 100%;
         aspect-ratio: 16 / 9;
+    }
+
+    .video-box video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
     }
 
     .video-description h2 {
