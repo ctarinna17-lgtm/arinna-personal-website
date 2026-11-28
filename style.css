@@ -51,6 +51,8 @@ header {
 }
 
 /* MOBILE NAVIGATION */
+
+/* MOBILE NAVIGATION */
 @media screen and (max-width: 768px) {
 
     header {
@@ -943,10 +945,9 @@ html, body {
     }
 
     .video-card {
-        flex: 0 0 85%;
-        min-width: 85%;
+        flex: 0 0 75%;
+        min-width: 75%;
         padding: 12px;
-        scroll-snap-align: start;
     }
 
     .video-box {
@@ -960,6 +961,7 @@ html, body {
 
     .video-description p {
         font-size: 12px;
+        line-height: 1.5;
     }
 
     .page-heading h1 {
