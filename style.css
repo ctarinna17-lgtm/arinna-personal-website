@@ -926,7 +926,7 @@ html, body {
 }
 
 /* MOBILE RESPONSIVE */
-@media (max-width: 700px) {
+@media screen and (max-width: 700px) {
 
     .video-page {
         width: 95%;
@@ -934,19 +934,22 @@ html, body {
     }
 
     .video-container {
-        display: flex;
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        gap: 15px;
-        padding: 5px 5px 15px;
-        scroll-snap-type: x mandatory;
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        overflow: visible;
+        gap: 20px;
+        width: 100%;
     }
 
     .video-card {
-        flex: 0 0 80%;
-        min-width: 80%;
+        width: 100%;
+        min-width: 0;
         padding: 12px;
-        scroll-snap-align: start;
+    }
+
+    .video-box {
+        width: 100%;
+        aspect-ratio: 16 / 9;
     }
 
     .video-description h2 {
