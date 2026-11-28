@@ -1,3 +1,4 @@
+
 /* GENERAL SETTINGS */
 * {
     margin: 0;
@@ -925,7 +926,7 @@ html, body {
     font-size: 16px;
 }
 
-/* MOBILE RESPONSIVE */
+/* MOBILE VIDEO HORIZONTAL SCROLL */
 @media screen and (max-width: 700px) {
 
     .video-page {
@@ -934,17 +935,21 @@ html, body {
     }
 
     .video-container {
-        display: grid !important;
-        grid-template-columns: 1fr !important;
-        overflow: visible;
-        gap: 20px;
+        display: flex !important;
+        flex-direction: row !important;
+        overflow-x: auto;
+        overflow-y: hidden;
+        gap: 15px;
         width: 100%;
+        padding-bottom: 15px;
+        scroll-snap-type: x mandatory;
     }
 
     .video-card {
-        width: 100%;
-        min-width: 0;
+        flex: 0 0 85%;
+        min-width: 85%;
         padding: 12px;
+        scroll-snap-align: start;
     }
 
     .video-box {
